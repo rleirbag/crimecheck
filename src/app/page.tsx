@@ -31,6 +31,22 @@ export default function Home() {
     }
   };
 
+  const examplePrompts = [
+    { text: "Me dê um resumo sobre a lei Maria da Penha" },
+    { text: "Quais os artigos da lei Carolina Dieckmann?" }
+  ];
+
+  const handlePromptClick = (prompt) => {
+    setMessages([...messages, { text: prompt, sender: "user" }]);
+    // Simulate bot response
+    setTimeout(() => {
+      setMessages(prev => [...prev, {
+        text: "Isto é uma resposta simulada de um prompt de exemplo: " + prompt,
+        sender: "bot"
+      }]);
+    }, 1000);
+  };
+
   return (
     <div className=" pt-8">
       <div className="relative max-w-4xl mx-auto">
@@ -40,6 +56,18 @@ export default function Home() {
             <div className="font-(family-name:--font-playfair) text-3xl antialiased leading-normal text-[2.5rem] max-w-200">CrimeCheck</div>
           </div>
           <div className="h-[600px] overflow-y-auto p-4 space-y-4">
+            {messages.length === 0 && (
+              <div className="flex w-full h-full items-center justify-center">
+                <div className="flex gap-8 p-4 items-center justify-center">
+                  {examplePrompts.map((prompt, index) => (
+                    <div key={index} className="relative w-[25%] cursor-pointer p-4 border bg-white border-amber-500 hover:bg-gray-100 text-center z-10" onClick={() => handlePromptClick(prompt.text)}>
+                      <div className="absolute inset-0 bg-amber-700/10 translate-x-2 translate-y-2 z-0"></div>
+                      {prompt.text}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {messages.map((message, index) => (
               <div
                 key={index}
