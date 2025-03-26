@@ -33,10 +33,10 @@ export default function Home() {
 
   const examplePrompts = [
     { text: "Me dê um resumo sobre a lei Maria da Penha" },
-    { text: "Quais os artigos da lei Carolina Dieckmann?" }
+    { text: "Tive minhas fotos expostas na internet por meu companheiro, isso configura algum crime?" }
   ];
 
-  const handlePromptClick = (prompt) => {
+  const handlePromptClick = (prompt: string) => {
     setMessages([...messages, { text: prompt, sender: "user" }]);
     // Simulate bot response
     setTimeout(() => {
@@ -57,10 +57,10 @@ export default function Home() {
           </div>
           <div className="h-[600px] overflow-y-auto p-4 space-y-4">
             {messages.length === 0 && (
-              <div className="flex w-full h-full items-center justify-center">
+              <div className="font-(family-name:--font-inter) flex w-full h-full items-center justify-center">
                 <div className="flex gap-8 p-4 items-center justify-center">
                   {examplePrompts.map((prompt, index) => (
-                    <div key={index} className="relative w-[25%] cursor-pointer p-4 border bg-white border-amber-500 hover:bg-gray-100 text-center z-10" onClick={() => handlePromptClick(prompt.text)}>
+                    <div key={index} className="relative h-48 w-[35%] cursor-pointer p-4 border bg-white border-amber-500 hover:bg-gray-100 text-center z-10 content-center" onClick={() => handlePromptClick(prompt.text)}>
                       <div className="absolute inset-0 bg-amber-700/10 translate-x-2 translate-y-2 z-0"></div>
                       {prompt.text}
                     </div>

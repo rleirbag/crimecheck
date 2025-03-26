@@ -1,6 +1,8 @@
 import * as React from "react";
 
-interface VisuallyHiddenProps extends React.HTMLAttributes<HTMLSpanElement> {}
+interface VisuallyHiddenProps {
+  children?: React.ReactNode;
+}
 
 const VisuallyHidden = React.forwardRef<HTMLSpanElement, VisuallyHiddenProps>(
   ({ children, ...props }, ref) => {

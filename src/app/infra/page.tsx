@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function Infra() {
   return (
     <div className="mx-auto p-4 lg:max-w-4xl sm:w-[60%]">
@@ -17,7 +19,7 @@ export default function Infra() {
       </h2>
 
       <div className="p-2">
-        <img src="/arquitetura.svg" alt="Arquitetura" className="w-full mb-6" />
+        <Image src="/arquitetura.svg" width={699.59} height={412.55} alt="Arquitetura" className="w-full mb-6" />
 
         <p className="mb-6">
           A aplicação é dividida em duas partes principais: o cliente, responsável

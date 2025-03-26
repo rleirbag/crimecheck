@@ -16,7 +16,6 @@ interface VoiceDialogProps {
 export function VoiceDialog({ onVoiceStart, onVoiceStop }: VoiceDialogProps) {
   const [open, setOpen] = React.useState(false);
   const {
-    isRecording,
     transcript,
     error,
     startRecording,
