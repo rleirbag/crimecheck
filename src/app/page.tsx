@@ -23,7 +23,7 @@ export default function Home() {
       }]);
     }, 1000);
   };
-  
+
   // Handle voice input from the VoiceDialog component
   const handleVoiceInput = (_duration: number, transcript?: string) => {
     if (transcript && transcript.trim()) {
@@ -32,11 +32,11 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-8">
+    <div className=" pt-8">
       <div className="relative max-w-4xl mx-auto">
         <div className="absolute inset-0 bg-black/10 translate-x-2 translate-y-2 "></div>
         <div className="relative bg-white shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden border border-black flex flex-col">
-          <div className="border-b p-4">
+          <div className="border-b p-2">
             <div className="font-(family-name:--font-playfair) text-3xl antialiased leading-normal text-[2.5rem] max-w-200">CrimeCheck</div>
           </div>
           <div className="h-[600px] overflow-y-auto p-4 space-y-4">

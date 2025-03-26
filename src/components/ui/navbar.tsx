@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 export const Navbar = () => {
   const pathname = usePathname()
   return (
-    <nav className="w-4xl mx-auto flex items-center pt-4">
+    <nav className="w-[70%] mx-auto flex items-center pt-4">
       <div className="w-8 h-8">
         {/* <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
