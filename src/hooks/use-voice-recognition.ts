@@ -4,15 +4,15 @@ import * as React from "react";
 
 interface VoiceRecognitionState {
   isRecording: boolean;
-  transcript: string;
+  audioBlob: Blob | null;
   error: string | null;
 }
 
 interface VoiceRecognitionHook {
   isRecording: boolean;
-  transcript: string;
+  audioBlob: Blob | null;
   error: string | null;
-  startRecording: () => void;
+  startRecording: () => Promise<void>;
   stopRecording: () => void;
   resetState: () => void;
 }
@@ -20,116 +20,123 @@ interface VoiceRecognitionHook {
 export function useVoiceRecognition(): VoiceRecognitionHook {
   const [state, setState] = React.useState<VoiceRecognitionState>({
     isRecording: false,
-    transcript: "",
+    audioBlob: null,
     error: null,
   });
 
-  const recognitionRef = React.useRef<SpeechRecognition | null>(null);
-  // Referência para controlar se devemos continuar gravando
-  const continueRecordingRef = React.useRef<boolean>(false);
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
 
-  const initializeSpeechRecognition = React.useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
+  const startRecording = React.useCallback(async () => {
+    try {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 16000, // Common sample rate for speech recognition
+          channelCount: 1,   // Mono audio
+          echoCancellation: true,
+          noiseSuppression: true
+        } 
+      });
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setState(prev => ({ ...prev, error: "Reconhecimento de voz não suportado neste navegador" }));
-      return;
-    }
+      // Clear previous audio chunks
+      audioChunksRef.current = [];
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'pt-BR';
+      // Create MediaRecorder instance with fallback support
+      let mediaRecorderOptions: MediaRecorderOptions = {};
+      
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mediaRecorderOptions.mimeType = 'audio/webm;codecs=opus';
+        console.log('Using audio/webm;codecs=opus');
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mediaRecorderOptions.mimeType = 'audio/webm';
+        console.log('Using audio/webm');
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mediaRecorderOptions.mimeType = 'audio/mp4';
+        console.log('Using audio/mp4');
+      } else {
+        console.log('Using default MediaRecorder format');
+      }
+      
+      const mediaRecorder = new MediaRecorder(stream, mediaRecorderOptions);
 
-    recognition.onstart = () => {
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        console.log('Data available:', event.data.size, 'bytes');
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        console.log('MediaRecorder stopped - onstop called');
+        // Create final audio blob with the same mimeType used for recording
+        const blobType = mediaRecorderOptions.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
+        console.log('Audio blob created:', { size: audioBlob.size, type: audioBlob.type, chunks: audioChunksRef.current.length });
+        setState(prev => ({ 
+          ...prev, 
+          isRecording: false, 
+          audioBlob 
+        }));
+
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        setState(prev => ({
+          ...prev,
+          isRecording: false,
+          error: `Erro na gravação: ${event.error}`
+        }));
+      };
+
+      // Start recording
+      console.log('Starting MediaRecorder...');
+      mediaRecorder.start(100); // Collect data every 100ms
       setState(prev => ({ ...prev, isRecording: true, error: null }));
-    };
+      console.log('MediaRecorder started, state:', mediaRecorder.state);
 
-    recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map(result => result[0].transcript)
-        .join(' ');
-      setState(prev => ({ ...prev, transcript }));
-    };
-
-    recognition.onerror = (event) => {
+    } catch (error) {
       setState(prev => ({
         ...prev,
-        isRecording: false,
-        error: `Erro no reconhecimento de voz: ${event.error}`
+        error: `Erro ao acessar microfone: ${error instanceof Error ? error.message : String(error)}`
       }));
-      recognitionRef.current = null;
-    };
-
-    recognition.onend = () => {
-      // Se continueRecordingRef for true, reinicie o reconhecimento
-      if (continueRecordingRef.current) {
-        try {
-          recognition.start();
-        } catch (error) {
-          console.error("Erro ao reiniciar reconhecimento:", error);
-          continueRecordingRef.current = false;
-          setState(prev => ({ ...prev, isRecording: false }));
-          recognitionRef.current = null;
-        }
-      } else {
-        setState(prev => ({ ...prev, isRecording: false }));
-        recognitionRef.current = null;
-      }
-    };
-
-    recognitionRef.current = recognition;
+    }
   }, []);
 
-  const startRecording = React.useCallback(() => {
-    try {
-      if (!state.isRecording) {
-        continueRecordingRef.current = true;
-        initializeSpeechRecognition();
-        recognitionRef.current?.start();
-      }
-    } catch (error) {
-      continueRecordingRef.current = false;
-      setState(prev => ({
-        ...prev,
-        error: `Erro ao iniciar gravação: ${error instanceof Error ? error.message : String(error)}`
-      }));
-    }
-  }, [state.isRecording, initializeSpeechRecognition]);
-
   const stopRecording = React.useCallback(() => {
-    continueRecordingRef.current = false;
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    console.log('stopRecording called, current state:', mediaRecorderRef.current?.state);
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      console.log('Stopping MediaRecorder...');
+      mediaRecorderRef.current.stop();
     }
   }, []);
 
   const resetState = React.useCallback(() => {
-    continueRecordingRef.current = false;
     setState({
       isRecording: false,
-      transcript: "",
+      audioBlob: null,
       error: null
     });
+    audioChunksRef.current = [];
   }, []);
 
+  // Cleanup on unmount
   React.useEffect(() => {
     return () => {
-      continueRecordingRef.current = false;
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        recognitionRef.current = null;
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
       }
     };
   }, []);
 
   return {
     isRecording: state.isRecording,
-    transcript: state.transcript,
+    audioBlob: state.audioBlob,
     error: state.error,
     startRecording,
     stopRecording,
