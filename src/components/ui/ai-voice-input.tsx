@@ -11,6 +11,7 @@ interface AIVoiceInputProps {
   demoMode?: boolean;
   demoInterval?: number;
   className?: string;
+  isRecording?: boolean;
 }
 
 export function AIVoiceInput({
@@ -19,7 +20,8 @@ export function AIVoiceInput({
   visualizerBars = 48,
   demoMode = false,
   demoInterval = 3000,
-  className
+  className,
+  isRecording = false
 }: AIVoiceInputProps) {
   const [submitted, setSubmitted] = useState(false);
   const [time, setTime] = useState(0);
@@ -30,14 +32,19 @@ export function AIVoiceInput({
     setIsClient(true);
   }, []);
 
-  // Timer effect - separated from the submitted state effect to avoid re-renders
+  // Use external isRecording state if provided, otherwise use internal submitted state
+  const isCurrentlyRecording = isRecording !== undefined ? isRecording : submitted;
+
+  // Timer effect - responds to both internal and external recording states
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
 
-    if (submitted) {
+    if (isCurrentlyRecording) {
       intervalId = setInterval(() => {
         setTime(t => t + 1);
       }, 1000);
+    } else {
+      setTime(0); // Reset timer when not recording
     }
 
     return () => {
@@ -45,10 +52,12 @@ export function AIVoiceInput({
         clearInterval(intervalId);
       }
     };
-  }, [submitted]);
+  }, [isCurrentlyRecording]);
 
-  // Handle start/stop callbacks
+  // Handle start/stop callbacks - Only when using internal state (no external isRecording)
   useEffect(() => {
+    if (isRecording !== undefined) return; // Skip if external isRecording is provided
+    
     if (submitted) {
       onStart?.();
     } else if (time > 0) {
@@ -56,7 +65,7 @@ export function AIVoiceInput({
       onStop?.(time);
       setTime(0);
     }
-  }, [submitted, time, onStart, onStop]);
+  }, [submitted, time, onStart, onStop, isRecording]);
 
   useEffect(() => {
     if (!isDemo) return;
@@ -87,8 +96,16 @@ export function AIVoiceInput({
     if (isDemo) {
       setIsDemo(false);
       setSubmitted(false);
-    } else {
+    } else if (isRecording === undefined) {
+      // Only control internal state if no external isRecording prop
       setSubmitted((prev) => !prev);
+    } else {
+      // If external isRecording is provided, call the appropriate callback
+      if (isRecording) {
+        onStop?.(time);
+      } else {
+        onStart?.();
+      }
     }
   };
 
@@ -98,14 +115,14 @@ export function AIVoiceInput({
         <button
           className={cn(
             "group w-16 h-16 rounded-xl flex items-center justify-center transition-colors",
-            submitted
+            isCurrentlyRecording
               ? "bg-none hover:bg-neutral-50"
               : "bg-none hover:bg-neutral-50 dark:hover:bg-white/10"
           )}
           type="button"
           onClick={handleClick}
         >
-          {submitted ? (
+          {isCurrentlyRecording ? (
             <div
               className="w-6 h-6 rounded-sm animate-spin bg-amber-400 dark:bg-white cursor-pointer pointer-events-auto"
               style={{ animationDuration: "3s" }}
@@ -118,7 +135,7 @@ export function AIVoiceInput({
         <span
           className={cn(
             "font-mono text-sm transition-opacity duration-300",
-            submitted
+            isCurrentlyRecording
               ? "text-black/70 dark:text-white/70"
               : "text-black/30 dark:text-white/30"
           )}
@@ -132,12 +149,12 @@ export function AIVoiceInput({
               key={i}
               className={cn(
                 "w-0.5 rounded-full transition-all duration-300",
-                submitted
+                isCurrentlyRecording
                   ? "bg-black/50 dark:bg-white/50 animate-pulse"
                   : "bg-black/10 dark:bg-white/10 h-1"
               )}
               style={
-                submitted && isClient
+                isCurrentlyRecording && isClient
                   ? {
                     height: `${20 + Math.random() * 80}%`,
                     animationDelay: `${i * 0.05}s`,
@@ -149,7 +166,7 @@ export function AIVoiceInput({
         </div>
 
         <p className="h-4 text-xs text-black/70 dark:text-white/70">
-          {submitted ? "Gravando..." : "Clique no microfone para gravar"}
+          {isCurrentlyRecording ? "Gravando..." : "Clique no microfone para gravar"}
         </p>
       </div>
     </div>
